@@ -7,16 +7,25 @@
   },
   "dependencies": {
     "express": "~4.10.6",
+    "connect-flash": "*",
+    "express-messages": "*",
+    "express-session": "*",
+    "express-validator": "*",
     "body-parser": "~1.10.1",
     "cookie-parser": "~1.3.3",
     "request": "~2.27.0",
     "morgan": "~1.5.1",
     "alchemy-api": "*",
     "consolidate": "~0.9.1",
+    "moment": "*",
+    "mongodb": "*",
+    "monk": "*",
+    "morgan": "~1.5.1",
     "serve-favicon": "~2.2.0",
     "dustjs-linkedin": "~2.0.3",
     "debug": "~2.1.1",
     "tag-explorer": "*",
-    "jade": "~1.8.2"
+    "jade": "~1.8.2",
+    "serve-favicon": "~2.2.0"
   }
 }

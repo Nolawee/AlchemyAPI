@@ -1,7 +1,22 @@
 doctype html
 html
-  head
-    title= title
-    link(rel='stylesheet', href='/stylesheets/style.css')
-  body
-    block content
+	head
+		title NodeBlog
+		link(rel='stylesheet', href='/stylesheets/style.css')
+	body
+		.container
+			img.logo(src='/images/markitLogo.jpeg')
+			nav
+				ul
+					li
+						a(href='/') Home
+					li
+						a(href='/News/Sources') News Sources
+					li
+						a(href='/News/Sources') Topics
+			!= messages()
+			block content
+				p Markit On Demand &copy; 2015
+
+	script( src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js' )
+	script( src='/javascripts/bootstrap.js' )

@@ -2,8 +2,13 @@ var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
 var logger = require('morgan');
+var expressValidator = require('express-validator')
 var cookieParser = require('cookie-parser');
+var session = require('express-session');
 var bodyParser = require('body-parser');
+var mongo = require('mongodb');
+var db = require('monk')('locallhost/nodeblog');
+var flash = require('connect-flash');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
@@ -12,6 +17,10 @@ var app = express();
 
 var AlchemyAPI = require('./node_modules/alchemy-api/');
 var alchemyapi = new AlchemyAPI();
+
+var demo_text = 'I want to make an counry named Mark Wahlberg';
+var demo_url  = '';
+var demo_html = '';
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -23,7 +32,46 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+// Express Session
+app.use(session({
+    secret: 'secret',
+    saveUninitialized: true,
+    resave: true
+}));
+
+// Express Validator
+app.use(expressValidator({
+    errorFormater: function(param, msg, value) {
+        var namespace = param.split('.')
+        , root    = namespace.shift()
+        , formParam = root;
+
+        while(namespace.length) {
+            formParam += '[' + namespace.shift() + ']';
+        }
+        return {
+            param : formParam,
+            msg   : msg,
+            value : value
+        };
+    }
+}));
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Connect-flash
+app.use(flash());
+app.use(function (req, res, next) {
+    res.locals.messages = require('express-messages')(req, res);
+    next();
+});
+
+// Make our db accessible to our router
+app.use(function (req,res,next){
+    req.db = db
+    next();
+});
 
 app.use('/', routes);
 app.use('/users', users);
@@ -40,6 +88,117 @@ function example(req, res) {
 
     //Start the analysis chain
     entities(req, res, output);
+}
+
+function entities(req, res, output) {
+    alchemyapi.entities('text', demo_text,{ 'sentiment':1 }, function(response) {
+        output['entities'] = { text:demo_text, response.JSON.stringify(response,null,4), results:response['keywords'] };
+        concepts(req, res, output);
+  });
+}
+
+function keywords(req, res, output) {
+    alchemyapi.keywords('text', demo_text, { 'sentiment':1 }, function(response) {
+        output['keywords'] = { text:demo_text, response.JSON.stringify(response,null,4), results:response['concepts'] };
+        sentiment(req, res, output);
+  });
+}
+
+function concepts(req, res, output) {
+    alchemyapi.concepts('text', demo_text, { 'showSourceText':1 }, function(response){
+        output['concepts'] = { text:demo_text, response.JSON.stringify(response,null,4), results:response['docSentiment'] }
+        text(req, res, output);
+    });
+}
+
+function text(req, res, output) {
+    alchemyapi.text('url', demo_url, {}, function(response) {
+        output['text'] = { url:demo_url, response.JSON.stringify(response,null,4), results:response };
+        language(req, res, output);
+    });
+}
+
+function author(req, res, output) {
+    alchemyapi.author('url', demo_url, {}, function(response) {
+        output['author'] = { url:demo_url, response:JSON.stringify(response,null,4), results:response };
+        language(req, res, output);
+    });
+}
+
+function language(req, res, output) {
+    alchemyapi.language('text', demo_text, {}, function(response) {
+        output['language'] = { text:demo_text, response:JSON.stringify(response,null,4), results:response };
+        title(req, res, output);
+    });
+}
+
+
+function title(req, res, output) {
+    alchemyapi.title('url', demo_url, {}, function(response) {
+        output['title'] = { url:demo_url, response:JSON.stringify(response,null,4), results:response };
+        relations(req, res, output);
+    });
+}
+
+
+function relations(req, res, output) {
+    alchemyapi.relations('text', demo_text, {}, function(response) {
+        output['relations'] = { text:demo_text, response:JSON.stringify(response,null,4), results:response['relations'] };
+        category(req, res, output);
+    });
+}
+
+
+function category(req, res, output) {
+    alchemyapi.category('text', demo_text, {}, function(response) {
+        output['category'] = { text:demo_text, response:JSON.stringify(response,null,4), results:response };
+        feeds(req, res, output);
+    });
+}
+
+
+function feeds(req, res, output) {
+    alchemyapi.feeds('url', demo_url, {}, function(response) {
+        output['feeds'] = { url:demo_url, response:JSON.stringify(response,null,4), results:response['feeds'] };
+        microformats(req, res, output);
+    });
+}
+
+
+function microformats(req, res, output) {
+    alchemyapi.microformats('url', demo_url, {}, function(response) {
+        output['microformats'] = { url:demo_url, response:JSON.stringify(response,null,4), results:response['microformats'] };
+        taxonomy(req, res, output);
+    });
+}
+
+
+function taxonomy(req, res, output) {
+    alchemyapi.taxonomy('url', demo_url, {}, function(response) {
+        output['taxonomy'] = { url:demo_url, response:JSON.stringify(response,null,4), results:response };
+        combined(req, res, output);
+    });
+}
+
+function combined(req, res, output) {
+    alchemyapi.combined('url', demo_url, {}, function(response) {
+        output['combined'] = { url:demo_url, response:JSON.stringify(response,null,4), results:response };
+        image(req, res, output);
+    });
+}
+
+function image(req, res, output) {
+    alchemyapi.image('url', demo_url, {}, function(response) {
+        output['image'] = { url:demo_url, response:JSON.stringify(response,null,4), results:response };
+        image_keywords(req, res, output);
+    });
+}
+
+function image_keywords(req, res, output) {
+    alchemyapi.image_keywords('url', demo_url, {}, function(response) {
+        output['image_keywords'] = { url:demo_url, response:JSON.stringify(response,null,4), results:response };
+        res.render('example',output);
+    });
 }
 
 // error handlers
@@ -63,84 +222,6 @@ function concepts(req, res, output) {
         sentiment(req, res, output);
     });
 }
-
-
-/*
-//CONCEPT TAGGING
-var AlchemyAPI = require('alchemy-api');
-var alchemy = new AlchemyAPI('<YOUR API KEY>');
-alchemy.concepts('<URL|HTML|TEXT>', {}, function(err, response) {
-  if (err) throw err;
-
-  // See http://www.alchemyapi.com/api/concept/htmlc.html for format of returned object
-  var concepts = response.concepts;
-
-  // Do something with data
-});
-
-//RELATION EXTRACTION
-var AlchemyAPI = require('alchemy-api');
-var alchemy = new AlchemyAPI('<YOUR API KEY>');
-alchemy.relations('<URL|HTML|TEXT>', {}, function(err, response) {
-  if (err) throw err;
-
-  // See http://www.alchemyapi.com/api/relation/htmlc.html for format of returned object
-  var relations = response.relations;
-
-  // Do something with data
-});
-
-//Keyword/Terminology Extraction
-var AlchemyAPI = require('alchemy-api');
-var alchemy = new AlchemyAPI('<YOUR API KEY>');
-alchemy.keywords('<URL|HTML|TEXT>', {}, function(err, response) {
-  if (err) throw err;
-
-  // See http://www.alchemyapi.com/api/keyword/htmlc.html for format of returned object
-  var keywords = response.keywords;
-
-  // Do something with data
-});
-
-//Taxonomy
-var AlchemyAPI = require('alchemy-api');
-var alchemy = new AlchemyAPI('<YOUR API KEY>');
-alchemy.taxonomies('<URL|HTML|TEXT>', {}, function(err, response) {
-  if (err) throw err;
-
-  // See http://www.alchemyapi.com/api/taxonomy_calls/html.html for format of returned object
-  var taxonomies = response.taxonomies;
-
-  // Do something with data
-});
-
-//RSS/ATOM Feed Discovery
-var AlchemyAPI = require('alchemy-api');
-var alchemy = new AlchemyAPI('<YOUR API KEY>');
-alchemy.feeds('<URL|HTML>', {}, function(err, response) {
-  if (err) throw err;
-
-  // See http://www.alchemyapi.com/api/feed/htmlc.html for format of returned object
-  var feeds = response.feeds;
-
-  // Do something with data
-});
-
-//API Key Information
-var AlchemyAPI = require('alchemy-api');
-var alchemy = new AlchemyAPI('<YOUR API KEY>');
-alchemy.apiKeyInfo({}, function(err, response) {
-  if (err) throw err;
-
-  // Do something with data
-  console.log('Status:', response.status, 'Consumed:', response.consumedDailyTransactions, 'Limit:', response.dailyTransactionLimit);
-  
-});
-*/
-
-// production error handler
-// no stacktraces leaked to user
-
 
 app.use(function(err, req, res, next) {
     res.status(err.status || 500);
